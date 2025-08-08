@@ -116,3 +116,28 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         walkToNearestBall()
     end
 end)
+
+-- 🟢 Sprint toggle (Y key)
+local sprinting = false
+
+task.spawn(function()
+    local sprintEvent = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Sprinting")
+    local args = {true}
+    while true do
+        if sprinting and warmupFinished.Value == true then
+            sprintEvent:FireServer(unpack(args))
+        end
+        task.wait(0.1)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Y and warmupFinished.Value == true then
+        sprinting = not sprinting
+        StarterGui:SetCore("SendNotification", {
+            Title = "Sprint Toggle",
+            Text = sprinting and "Sprint: ON" or "Sprint: OFF",
+            Duration = 3
+        })
+    end
+end)
