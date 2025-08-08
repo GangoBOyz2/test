@@ -1,870 +1,146 @@
-local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/master/source.lua", true))()
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local ContextActionService = game:GetService("ContextActionService")
-local Workspace = game:GetService("Workspace")
+local player = game.Players.LocalPlayer
+local gameValues = ReplicatedStorage:WaitForChild("GameValues")
+local warmupFinished = gameValues:WaitForChild("WarmupFinished")
 
-local player = Players.LocalPlayer
-
-local autoGreenEnabled = false
-local infiniteStaminaEnabled = false
-local makeAllPassesEnabled = false
-local dribbleEnhancerEnabled = false
-local autoBlockEnabled = false
-local quickstopShotEnabled = false
-local spinbotEnabled = false
-local speedBoostEnabled = false
-
-local dribbleBoostAmount = 80
-local autoBlockRange = 30
-local spinbotSpeed = 2
-local speedBoostAmount = 5
-
-local autoGreenConnection
-local infiniteStaminaConnection
-local makeAllPassesConnection
-local dribbleEnhancerConnection
-local autoBlockConnection
-local autoBlockDescAddedConn
-local autoBlockDescRemovingConn
-local ballMagnetConnection
-local ballMagnetTask
-local quickstopConnection
-local quickstopInputEndedConnection
-local spinbotConnection
-local speedBoostConnection
-
-local Window = Luna:CreateWindow({
-    Name = "Holy Services",
-    Subtitle = nil,
-    LogoID = nil,
-    LoadingEnabled = true,
-    LoadingTitle = "Holy Services",
-    LoadingSubtitle = "Best Script Ever.",
-    ConfigSettings = {
-        RootFolder = nil,
-        ConfigFolder = "HolyServices"
-    },
-    KeySystem = false
-})
-
-local MainTab = Window:CreateTab({
-    Name = "Main",
-    Icon = "sports_basketball",
-    ImageSource = "Material",
-    ShowTitle = true
-})
-
-local SettingsTab = Window:CreateTab({
-    Name = "Settings",
-    Icon = "settings",
-    ImageSource = "Material",
-    ShowTitle = true
-})
-
-MainTab:CreateToggle({
-	Name = "Auto Green",
-	Description = "Automatically times shots for perfect release",
-	CurrentValue = false,
-	Callback = function(state)
-		autoGreenEnabled = state
-
-		if autoGreenConnection then
-			autoGreenConnection:Disconnect()
-			autoGreenConnection = nil
-		end
-
-		if not autoGreenEnabled then return end
-
-		local UserInputService = game:GetService("UserInputService")
-		local ReplicatedStorage = game:GetService("ReplicatedStorage")
-		local Players = game:GetService("Players")
-
-		local player = Players.LocalPlayer
-		local shootEvent = ReplicatedStorage:WaitForChild("Events", 5):WaitForChild("Shoot", 5)
-		if not shootEvent then return end
-
-		local shootArgs = { false, -0.98, true }
-
-		local function fireShoot()
-			task.wait(0.1)
-			shootEvent:FireServer(unpack(shootArgs))
-		end
-
-		local function pressSpace()
-			task.wait(0.5)
-			keyrelease(0x20)
-		end
-
-		autoGreenConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-			if not autoGreenEnabled or gameProcessed then return end
-
-			if input.UserInputType == Enum.UserInputType.Keyboard then
-				if input.KeyCode == Enum.KeyCode.E then
-					fireShoot()
-					delay(0.4, function()
-						keyrelease(0x45)
-					end)
-				elseif input.KeyCode == Enum.KeyCode.Space then
-					pressSpace()
-				end
-			elseif input.UserInputType == Enum.UserInputType.Gamepad1 then
-				if input.KeyCode == Enum.KeyCode.ButtonX then
-					fireShoot()
-				elseif input.KeyCode == Enum.KeyCode.ButtonY then
-					pressSpace()
-				end
-			end
-		end)
-
-		task.spawn(function()
-			local gui = player:WaitForChild("PlayerGui", 5)
-			if not gui then return end
-
-			local mobile = gui:WaitForChild("Mobile", 5)
-			if not mobile then return end
-
-			local offense = mobile:WaitForChild("Offense", 5)
-			if not offense then return end
-
-			local shoot = offense:WaitForChild("Shoot", 5)
-			if shoot then
-				shoot.Activated:Connect(function()
-					if autoGreenEnabled then
-						fireShoot()
-					end
-				end)
-			end
-
-			local dunk = offense:WaitForChild("Dunk", 5)
-			if dunk then
-				dunk.Activated:Connect(function()
-					if autoGreenEnabled then
-						pressSpace()
-					end
-				end)
-			end
-		end)
-	end
-}, "AutoGreen")
-
-MainTab:CreateToggle({
-    Name = "Infinite Stamina",
-    Description = "Maintains maximum stamina",
-    CurrentValue = false,
-    Callback = function(state)
-        infiniteStaminaEnabled = state
-        if infiniteStaminaConnection then
-            infiniteStaminaConnection:Disconnect()
-            infiniteStaminaConnection = nil
-        end
-        if infiniteStaminaEnabled then
-            local stamina = player:WaitForChild("Values"):WaitForChild("Stamina")
-            infiniteStaminaConnection = RunService.Heartbeat:Connect(function()
-                if infiniteStaminaEnabled and stamina.Value ~= 1 then
-                    stamina.Value = 1
-                end
-            end)
-        end
-    end
-}, "InfiniteStamina")
-
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-
-local player = Players.LocalPlayer
-
-local courtBorders = {}
-local outOfBoundsConnection
-
-local function toggleAntiOutOfBounds(enabled)
-	if enabled then
-		for _, d in ipairs(Workspace:GetDescendants()) do
-			if d.Name == "CourtBorders" or d.Name == "OutOfBounds" then
-				courtBorders[d] = {Parent = d.Parent, Instance = d:Clone()}
-				d:Destroy()
-			end
-		end
-		outOfBoundsConnection = Workspace.DescendantAdded:Connect(function(d)
-			if d.Name == "CourtBorders" or d.Name == "OutOfBounds" then
-				courtBorders[d] = {Parent = d.Parent, Instance = d:Clone()}
-				d:Destroy()
-			end
-		end)
-	else
-		if outOfBoundsConnection then
-			outOfBoundsConnection:Disconnect()
-			outOfBoundsConnection = nil
-		end
-		for _, data in pairs(courtBorders) do
-			local newInstance = data.Instance:Clone()
-			newInstance.Parent = data.Parent
-		end
-		courtBorders = {}
-	end
-end
-
-MainTab:CreateToggle({
-	Name = "Anti Out of Bounds",
-	Description = "Removes court boundaries",
-	CurrentValue = false,
-	Callback = function(Value)
-		toggleAntiOutOfBounds(Value)
-	end
-})
-
-MainTab:CreateButton({
-    Name = "Get All Items",
-    Description = "Adds all clothing items to inventory",
-    Callback = function()
-        local profile = player:WaitForChild("Profile")
-        local inventory = profile:WaitForChild("Inventory")
-        local clothingAssets = ReplicatedStorage:WaitForChild("ClothingAssets")
-        for _, assetFolder in ipairs(clothingAssets:GetChildren()) do
-            if assetFolder:IsA("Folder") then
-                local inventoryFolder = inventory:FindFirstChild(assetFolder.Name)
-                if inventoryFolder and inventoryFolder:IsA("Folder") then
-                    for _, item in ipairs(assetFolder:GetChildren()) do
-                        local itemClass = item.ClassName
-                        if (itemClass == "Accessory" or itemClass == "Shirt" or itemClass == "Pants" or itemClass == "StringValue" or itemClass == "Folder" or itemClass == "Sound") and not inventoryFolder:FindFirstChild(item.Name) then
-                            local stringValue = Instance.new("StringValue")
-                            stringValue.Name = item.Name
-                            stringValue.Parent = inventoryFolder
-                        end
-                    end
-                end
-            end
-        end
-        Luna:Notification({
-            Title = "Success",
-            Icon = "check_circle",
-            ImageSource = "Material",
-            Content = "All items have been added to your inventory!"
-        })
-    end
-})
-
-MainTab:CreateToggle({
-    Name = "Make All Passes",
-    Description = "Auto-passes to teammates (Mobile not supported)",
-    CurrentValue = false,
-    Callback = function(state)
-        makeAllPassesEnabled = state
-        if makeAllPassesConnection then
-            makeAllPassesConnection:Disconnect()
-            makeAllPassesConnection = nil
-        end
-        if makeAllPassesEnabled then
-            local PassEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Pass")
-            local function getTeammateName(slot)
-                local teammateValue = nil
-                local valuesFolder = player:WaitForChild("Values")
-                if slot == 1 then
-                    teammateValue = valuesFolder:WaitForChild("Teammate1")
-                elseif slot == 2 then
-                    teammateValue = valuesFolder:WaitForChild("Teammate2")
-                end
-                return teammateValue and teammateValue.Value and teammateValue.Value.Name or nil
-            end
-            makeAllPassesConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-                if not makeAllPassesEnabled or gameProcessed then return end
-                local slot = (input.KeyCode == Enum.KeyCode.One or input.KeyCode == Enum.KeyCode.ButtonX) and 1
-                    or (input.KeyCode == Enum.KeyCode.Two and 2)
-                if slot then
-                    local teammateName = getTeammateName(slot)
-                    if teammateName then
-                        PassEvent:FireServer(teammateName, false)
-                    end
-                end
-            end)
-        end
-    end
-}, "MakeAllPasses")
-
-local dribbleBoostAmount = 80
-local dribbleEnhancerEnabled = false
-local dribbleEnhancerConnection = nil
+local VirtualUser = game:GetService('VirtualUser')
+local StarterGui = game:GetService('StarterGui')
 local RunService = game:GetService("RunService")
-local player = game:GetService("Players").LocalPlayer
 
-MainTab:CreateToggle({
-    Name = "Dribble Enhancer",
-    Description = "Enhances dribbling movement",
-    CurrentValue = false,
-    Callback = function(state)
-        dribbleEnhancerEnabled = state
+StarterGui:SetCore("SendNotification", { Title = "XP SCRIPT | BADGEPLUG |", Text = "| ACTIVATED |", Duration = 5 })
 
-        if dribbleEnhancerConnection then
-            dribbleEnhancerConnection:Disconnect()
-            dribbleEnhancerConnection = nil
-        end
+player.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
 
-        if not dribbleEnhancerEnabled then return end
-
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        local hoops = {}
-        local boostRampDuration = 0.35
-        local activeBoost = nil
-
-        local function updateHoops()
-            hoops = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("Model") and obj.Name == "Hoop" then
-                    local part = obj:FindFirstChild("Goal") or obj.PrimaryPart
-                    if part then
-                        table.insert(hoops, part)
-                    end
-                end
-            end
-        end
-
-        updateHoops()
-
-        local function getNearestHoop()
-            local closest, dist = nil, math.huge
-            for _, part in ipairs(hoops) do
-                local d = (part.Position - humanoidRootPart.Position).Magnitude
-                if d < dist then
-                    dist = d
-                    closest = part
-                end
-            end
-            return closest
-        end
-
-        local function getDirectionVector(dir)
-            local hoop = getNearestHoop()
-            if not hoop then return nil end
-            local cf = CFrame.new(humanoidRootPart.Position, hoop.Position)
-            if dir == "Left" then return -cf.RightVector end
-            if dir == "Right" then return cf.RightVector end
-            if dir == "Back" then return -cf.LookVector end
-            return nil
-        end
-
-        local function startBoost(direction)
-            if activeBoost then
-                activeBoost:Disconnect()
-                activeBoost = nil
-            end
-
-            local startVel = humanoidRootPart.Velocity
-            local yVel = startVel.Y
-            local startTime = tick()
-            local targetVel = direction.Unit * dribbleBoostAmount
-
-            activeBoost = RunService.Heartbeat:Connect(function()
-                if not dribbleEnhancerEnabled then
-                    activeBoost:Disconnect()
-                    activeBoost = nil
-                    return
-                end
-
-                local t = (tick() - startTime) / boostRampDuration
-                local alpha = math.clamp(t, 0, 1)
-                local newX = startVel.X + (targetVel.X - startVel.X) * alpha
-                local newZ = startVel.Z + (targetVel.Z - startVel.Z) * alpha
-                humanoidRootPart.Velocity = Vector3.new(newX, yVel, newZ)
-
-                if alpha >= 1 then
-                    activeBoost:Disconnect()
-                    activeBoost = nil
-                end
-            end)
-        end
-
-        local values = player:WaitForChild("Values")
-        local moveVal = values:WaitForChild("DribbleMoving")
-
-        dribbleEnhancerConnection = moveVal.Changed:Connect(function(newDir)
-            if not dribbleEnhancerEnabled then return end
-
-            if newDir == "Left" or newDir == "Right" or newDir == "Back" then
-                local dirVec = getDirectionVector(newDir)
-                if dirVec then
-                    startBoost(dirVec)
-                end
-            elseif activeBoost then
-                activeBoost:Disconnect()
-                activeBoost = nil
-            end
-        end)
-    end
-}, "DribbleEnhancer")
-
-MainTab:CreateSlider({
-    Name = "Dribble Boost Amount",
-    Range = {0, 200},
-    Increment = 5,
-    CurrentValue = dribbleBoostAmount,
-    Callback = function(value)
-        dribbleBoostAmount = value
-    end
-}, "DribbleBoostAmount")
-
-MainTab:CreateToggle({
-    Name = "Auto Block",
-    Description = "Automatically blocks nearby basketballs",
-    CurrentValue = false,
-    Callback = function(state)
-        autoBlockEnabled = state
-        if autoBlockConnection then
-            autoBlockConnection:Disconnect()
-            autoBlockConnection = nil
-        end
-        if autoBlockDescAddedConn then
-            autoBlockDescAddedConn:Disconnect()
-            autoBlockDescAddedConn = nil
-        end
-        if autoBlockDescRemovingConn then
-            autoBlockDescRemovingConn:Disconnect()
-            autoBlockDescRemovingConn = nil
-        end
-        if autoBlockEnabled then
-            local hrp = nil
-            local currentBall = nil
-            local basketballs = {}
-            local function updateHRP()
-                local char = player.Character or player.CharacterAdded:Wait()
-                hrp = char:WaitForChild("HumanoidRootPart")
-            end
-            local function getDistance(a, b)
-                return (a - b).Magnitude
-            end
-            local function findClosestBasketball()
-                if not hrp then return nil end
-                local closest = nil
-                local closestDist = autoBlockRange
-                for ball, _ in pairs(basketballs) do
-                    if ball and ball.Parent then
-                        local playerVal = ball:FindFirstChild("Player")
-                        if playerVal and playerVal.Value then
-                            local dist = getDistance(ball.Position, hrp.Position)
-                            if dist < closestDist then
-                                closest = ball
-                                closestDist = dist
-                            end
-                        end
-                    end
-                end
-                return closest
-            end
-            local function onBasketballAdded(ball)
-                basketballs[ball] = true
-                local closest = findClosestBasketball()
-                if closest ~= currentBall then
-                    currentBall = closest
-                end
-            end
-            local function onBasketballRemoved(ball)
-                basketballs[ball] = nil
-                if currentBall == ball then
-                    currentBall = findClosestBasketball()
-                end
-            end
-            local function tryBlock()
-                if not autoBlockEnabled or not currentBall then return end
-                local playerVal = currentBall:FindFirstChild("Player")
-                if not playerVal or not playerVal.Value then
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                    currentBall = nil
-                end
-            end
-            updateHRP()
-            player.CharacterAdded:Connect(updateHRP)
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("MeshPart") and obj.Name == "Basketball" then
-                    basketballs[obj] = true
-                end
-            end
-            autoBlockDescAddedConn = workspace.DescendantAdded:Connect(function(desc)
-                if desc:IsA("MeshPart") and desc.Name == "Basketball" then
-                    onBasketballAdded(desc)
-                end
-            end)
-            autoBlockDescRemovingConn = workspace.DescendantRemoving:Connect(function(desc)
-                if desc:IsA("MeshPart") and desc.Name == "Basketball" then
-                    onBasketballRemoved(desc)
-                end
-            end)
-            autoBlockConnection = RunService.Heartbeat:Connect(tryBlock)
-        else
-            currentBall = nil
-            basketballs = {}
+local function disableAFKCheck()
+    local function disableScriptInGui(gui)
+        local afkCheckScript = gui:FindFirstChild("AFK.Check")
+        if afkCheckScript and afkCheckScript:IsA("LocalScript") then
+            afkCheckScript.Disabled = true
         end
     end
-}, "AutoBlock")
 
-MainTab:CreateSlider({
-    Name = "Auto Block Range",
-    Range = {0, 30},
-    Increment = 1,
-    CurrentValue = 30,
-    Callback = function(value)
-        autoBlockRange = value
+    local starterGuiAFKUi = StarterGui:FindFirstChild("AFK.Ui")
+    if starterGuiAFKUi then
+        disableScriptInGui(starterGuiAFKUi)
     end
-}, "AutoBlockRange")
 
-local basketballAddedConn, basketballRemovedConn
+    local playerGuiAFKUi = player.PlayerGui:FindFirstChild("AFK.Ui")
+    if playerGuiAFKUi then
+        disableScriptInGui(playerGuiAFKUi)
+    end
+end
 
+disableAFKCheck()
 
+local humanoidsFolder = workspace:FindFirstChild("Humanoids")
+local character = humanoidsFolder and humanoidsFolder:FindFirstChild(player.Name)
+if not character then
+    character = player.Character or player.CharacterAdded:Wait()
+end
 
-local player = game:GetService("Players").LocalPlayer
-
-local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
-local rootPart = character:WaitForChild("HumanoidRootPart")
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local DISTANCE_IN_FRONT = 5
-local MOVE_THRESHOLD = 0.5
-local ROTATION_SPEED = 8
-local autoGuardAllowed = false
-local autoGuardEnabled = false
-local autoGuardToggle
-
-local function setAutoGuardState(enabled)
-	if autoGuardAllowed then
-		autoGuardEnabled = enabled
-	else
-		autoGuardEnabled = false
-	end
-	if autoGuardToggle and autoGuardToggle.SetValue then
-		autoGuardToggle:SetValue(autoGuardEnabled)
-	end
-	if not autoGuardEnabled and humanoid then
-		humanoid:Move(Vector3.zero, false)
-	end
-end
-
-autoGuardToggle = MainTab:CreateToggle({
-	Name = "Auto Guard",
-	Description = "Toggle auto guard feature (hold G/L2/mobile button to activate)",
-	CurrentValue = false,
-	Callback = function(Value)
-		autoGuardAllowed = Value
-		if not autoGuardAllowed then
-			setAutoGuardState(false)
-		end
-	end
-})
-
-MainTab:CreateSlider({
-	Name = "Guard Distance",
-	Range = {1, 20},
-	Increment = 1,
-	CurrentValue = DISTANCE_IN_FRONT,
-	Callback = function(Value)
-		DISTANCE_IN_FRONT = Value
-	end
-})
-
-player.CharacterAdded:Connect(function(char)
-	character = char
-	humanoid = character:WaitForChild("Humanoid")
-	rootPart = character:WaitForChild("HumanoidRootPart")
-end)
-
-local rimParts = {}
-
-local function tryAddRim(part)
-	if part:IsA("MeshPart") and part.Name == "Rim" then
-		table.insert(rimParts, part)
-	end
-end
-
-for _, part in ipairs(Workspace:GetDescendants()) do
-	tryAddRim(part)
-end
-
-Workspace.DescendantAdded:Connect(function(part)
-	tryAddRim(part)
-end)
-
-local function getClosestPlayer()
-	local closest = nil
-	local minDist = math.huge
-	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-			local dist = (rootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-			if dist < minDist then
-				minDist = dist
-				closest = plr
-			end
-		end
-	end
-	return closest
-end
-
-local function getClosestRimPart()
-	local closest = nil
-	local minDist = math.huge
-	for _, part in ipairs(rimParts) do
-		if part and part.Parent then
-			local dist = (rootPart.Position - part.Position).Magnitude
-			if dist < minDist then
-				minDist = dist
-				closest = part
-			end
-		end
-	end
-	return closest
-end
-
-local currentTarget = nil
-
-local GuardButton = player:WaitForChild("PlayerGui"):WaitForChild("Mobile"):WaitForChild("Defense"):WaitForChild("Guard")
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if not autoGuardAllowed then return end
-	if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.G then
-		setAutoGuardState(true)
-	elseif input.UserInputType == Enum.UserInputType.Gamepad1 and input.KeyCode == Enum.KeyCode.ButtonL2 then
-		setAutoGuardState(true)
-	end
-end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if not autoGuardAllowed then return end
-	if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.G then
-		setAutoGuardState(false)
-	elseif input.UserInputType == Enum.UserInputType.Gamepad1 and input.KeyCode == Enum.KeyCode.ButtonL2 then
-		setAutoGuardState(false)
-	end
-end)
-
-GuardButton.MouseButton1Down:Connect(function()
-	if autoGuardAllowed then
-		setAutoGuardState(true)
-	end
-end)
-
-GuardButton.MouseButton1Up:Connect(function()
-	if autoGuardAllowed then
-		setAutoGuardState(false)
-	end
-end)
-
-RunService.RenderStepped:Connect(function(dt)
-	if not autoGuardEnabled or not character or not rootPart or not humanoid then return end
-	currentTarget = getClosestPlayer()
-	local rimPart = getClosestRimPart()
-	if currentTarget and rimPart then
-		local targetRoot = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-		if targetRoot then
-			local rimPos = rimPart.Position
-			local targetPos = targetRoot.Position
-			local rimToPlayerDir = (targetPos - rimPos).Unit
-			local desiredPos = targetPos - rimToPlayerDir * DISTANCE_IN_FRONT
-			desiredPos = Vector3.new(desiredPos.X, rootPart.Position.Y, desiredPos.Z)
-			local moveVector = desiredPos - rootPart.Position
-			if moveVector.Magnitude > MOVE_THRESHOLD then
-				humanoid:Move(moveVector.Unit, false)
-			else
-				humanoid:Move(Vector3.zero, false)
-			end
-			local lookCFrame = CFrame.new(rootPart.Position, Vector3.new(targetPos.X, rootPart.Position.Y, targetPos.Z))
-			local toRimDir = (rimPos - rootPart.Position).Unit
-			local forwardDir = lookCFrame.LookVector
-			local dot = forwardDir:Dot(toRimDir)
-			local targetCFrame = dot > 0 and lookCFrame * CFrame.Angles(0, math.rad(180), 0) or lookCFrame
-			rootPart.CFrame = rootPart.CFrame:Lerp(targetCFrame, math.clamp(ROTATION_SPEED * dt, 0, 1))
-		end
-	end
-end)
-
-MainTab:CreateToggle({
-    Name = "Quickstop Shot",
-    Description = "Quick stop shot with Q+E or R1+Square (Mobile not supported)",
-    CurrentValue = false,
-    Callback = function(state)
-        quickstopShotEnabled = state
-        if quickstopConnection then
-            quickstopConnection:Disconnect()
-            quickstopConnection = nil
+local function AutoShoot()
+    pcall(function()
+        local args = {true, "Shooting", "Standing Shot"}
+        local event = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
+            
+        local actionValues = player.Backpack:WaitForChild("ActionValues", 5)
+        local powerValue = actionValues and actionValues:WaitForChild("Power", 2)
+            
+        local gameplayAnimations = player.Backpack:WaitForChild("GameplayAnimations", 5)
+        local shootingAnimations = gameplayAnimations and gameplayAnimations:WaitForChild("ShootingAnimations", 2)
+        local animation = shootingAnimations and shootingAnimations:FindFirstChild("Jumpshot")
+            
+        if not humanoidRootPart then return end
+        humanoidRootPart.Anchored = true
+            
+        local connection
+        if powerValue then
+            connection = RunService.Heartbeat:Connect(function()
+                powerValue.Value = 1
+            end)
         end
-        if quickstopInputEndedConnection then
-            quickstopInputEndedConnection:Disconnect()
-            quickstopInputEndedConnection = nil
+            
+        if animation and humanoid then
+            local animator = humanoid:FindFirstChildOfClass("Animator")
+            if animator then
+                local animTrack = animator:LoadAnimation(animation)
+                animTrack:Play()
+            end
         end
-        if quickstopShotEnabled then
-            local movementKeys = {
-                Enum.KeyCode.W,
-                Enum.KeyCode.A,
-                Enum.KeyCode.S,
-                Enum.KeyCode.D,
-                Enum.KeyCode.Thumbstick1
-            }
-            local qHeld = false
-            local eHeld = false
-            local r1Held = false
-            local squareHeld = false
-            local movementDisabled = false
-            local function blockMovement(_, _)
-                return Enum.ContextActionResult.Sink
+            
+        if event then
+            for i = 1, 1000000 do
+                event:FireServer(unpack(args))
+                task.wait()
             end
-            local function disableMovementTemporarily()
-                if movementDisabled or not quickstopShotEnabled then return end
-                movementDisabled = true
-                ContextActionService:BindAction("BlockMovement", blockMovement, false, unpack(movementKeys))
-                task.delay(0.1, function()
-                    ContextActionService:UnbindAction("BlockMovement")
-                    movementDisabled = false
-                end)
-            end
-            quickstopConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-                if not quickstopShotEnabled or gameProcessed then return end
-                local key = input.KeyCode
-                if key == Enum.KeyCode.Q then qHeld = true end
-                if key == Enum.KeyCode.E then eHeld = true end
-                if key == Enum.KeyCode.ButtonR1 then r1Held = true end
-                if key == Enum.KeyCode.ButtonX then squareHeld = true end
-                if (qHeld and eHeld) or (r1Held and squareHeld) then
-                    disableMovementTemporarily()
+        end
+            
+        if connection then
+            connection:Disconnect()
+        end
+        humanoidRootPart.Anchored = false
+    end)
+end
+
+local function walkToNearestBall()
+    local nearestBall = nil
+    local minDistance = math.huge
+
+    local ballsFolder = workspace:FindFirstChild("Balls")
+    if ballsFolder then
+        for _, ball in pairs(ballsFolder:GetChildren()) do
+            if ball.Name == "Ball" and ball:IsA("BasePart") then
+                local distance = (ball.Position - character.HumanoidRootPart.Position).magnitude
+                if distance < minDistance then
+                    nearestBall = ball
+                    minDistance = distance
                 end
-            end)
-            quickstopInputEndedConnection = UserInputService.InputEnded:Connect(function(input)
-                if not quickstopShotEnabled then return end
-                local key = input.KeyCode
-                if key == Enum.KeyCode.Q then qHeld = false end
-                if key == Enum.KeyCode.E then eHeld = false end
-                if key == Enum.KeyCode.ButtonR1 then r1Held = false end
-                if key == Enum.KeyCode.ButtonX then squareHeld = false end
-            end)
-        end
-    end
-}, "QuickstopShot")
-
-MainTab:CreateToggle({
-    Name = "Spinbot",
-    Description = "Spins character with T or L1 (Mobile not supported)",
-    CurrentValue = false,
-    Callback = function(state)
-        spinbotEnabled = state
-        if spinbotConnection then
-            spinbotConnection:Disconnect()
-            spinbotConnection = nil
-        end
-        if spinbotEnabled then
-            local character = player.Character or player.CharacterAdded:Wait()
-            local root = character:WaitForChild("HumanoidRootPart")
-            local spinning = false
-            spinbotConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-                if not spinbotEnabled or gameProcessed or spinning then return end
-                if input.KeyCode == Enum.KeyCode.T or input.KeyCode == Enum.KeyCode.ButtonL1 then
-                    spinning = true
-                    local angleRotated = 0
-                    local baseSpeed = 360 + spinbotSpeed * 100
-                    local spinSpeed = math.rad(baseSpeed)
-                    local spinTarget = 2 * math.pi
-                    local angularVelocity = Instance.new("BodyAngularVelocity")
-                    angularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
-                    angularVelocity.AngularVelocity = Vector3.new(0, spinSpeed, 0)
-                    angularVelocity.P = 10000
-                    angularVelocity.Parent = root
-                    local lastTime = tick()
-                    local conn
-                    conn = RunService.RenderStepped:Connect(function()
-                        if not spinbotEnabled then
-                            angularVelocity:Destroy()
-                            conn:Disconnect()
-                            spinning = false
-                            return
-                        end
-                        local now = tick()
-                        local delta = now - lastTime
-                        lastTime = now
-                        local deltaAngle = spinSpeed * delta
-                        angleRotated += deltaAngle
-                        if angleRotated >= spinTarget then
-                            angularVelocity:Destroy()
-                            conn:Disconnect()
-                            spinning = false
-                        end
-                    end)
-                end
-            end)
-        end
-    end
-}, "Spinbot")
-
-MainTab:CreateSlider({
-    Name = "Spinbot Speed",
-    Range = {0, 50},
-    Increment = 1,
-    CurrentValue = 2,
-    Callback = function(value)
-        spinbotSpeed = value
-    end
-}, "SpinbotSpeed")
-
-MainTab:CreateToggle({
-    Name = "Speed Boost",
-    Description = "Increases movement speed",
-    CurrentValue = false,
-    Callback = function(state)
-        speedBoostEnabled = state
-        if speedBoostConnection then
-            speedBoostConnection:Disconnect()
-            speedBoostConnection = nil
-        end
-        if speedBoostEnabled then
-            local rotationSpeed = 1
-            local lastDirection = Vector3.new()
-            local isMoving = false
-            local function startEnhancedWalking()
-                local character = workspace:FindFirstChild(player.Name)
-                if not character then return end
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                if not humanoid then return end
-                local head = character:WaitForChild("Head")
-                head.Anchored = false
-                speedBoostConnection = RunService.Heartbeat:Connect(function(deltaTime)
-                    if not speedBoostEnabled then return end
-                    local moveDir = humanoid.MoveDirection
-                    local horizontalMove = Vector3.new(moveDir.X, 0, moveDir.Z) * speedBoostAmount * 100 * deltaTime
-                    if horizontalMove.Magnitude > 0 then
-                        lastDirection = horizontalMove.Unit
-                        isMoving = true
-                    else
-                        isMoving = false
-                    end
-                    local rootPart = character.PrimaryPart
-                    if not rootPart then return end
-                    local currentPos = rootPart.Position
-                    local newPos = currentPos + horizontalMove
-                    if isMoving then
-                        local targetLookAt = newPos + lastDirection
-                        local currentCFrame = rootPart.CFrame
-                        local newCFrame = CFrame.new(newPos, targetLookAt)
-                        local smoothedCFrame = currentCFrame:Lerp(newCFrame, rotationSpeed * deltaTime)
-                        character:SetPrimaryPartCFrame(smoothedCFrame)
-                    end
-                end)
             end
-            startEnhancedWalking()
         end
     end
-}, "SpeedBoost")
 
-MainTab:CreateSlider({
-    Name = "Speed Boost Amount",
-    Range = {0, 100},
-    Increment = 1,
-    CurrentValue = 5,
-    Callback = function(value)
-        speedBoostAmount = value
+    if nearestBall then
+        humanoid:MoveTo(nearestBall.Position)
+        humanoid.MoveToFinished:Wait()
+        wait(2)
+        AutoShoot()
     end
-}, "SpeedBoostAmount")
+end
 
-SettingsTab:BuildThemeSection()
-SettingsTab:BuildConfigSection()
+local function moveToPositionAfterInterval()
+    while true do
+        if warmupFinished.Value == true then
+            wait(90)
+            local originalPosition = Vector3.new(-13.00, 3.34, -420.29)
+            humanoid:MoveTo(originalPosition)
+            humanoid.MoveToFinished:Wait()
+        end
+        wait(1)
+    end
+end
 
-Luna:LoadAutoloadConfig()
+warmupFinished:GetPropertyChangedSignal("Value"):Connect(function()
+    if warmupFinished.Value == true then
+        moveToPositionAfterInterval()
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    local x2Event = ReplicatedStorage:FindFirstChild("X2Event")
+    if x2Event then
+        x2Event.Value = true
+    end
+    
+    local expMultiplier = ReplicatedStorage:FindFirstChild("RECSettings") and ReplicatedStorage.RECSettings:FindFirstChild("EXP_Multiplier")
+    if expMultiplier and expMultiplier:IsA("IntValue") then
+        expMultiplier.Value = 10000
+    end
+end)
+
+walkToNearestBall()
