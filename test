@@ -42,8 +42,10 @@ end
 local humanoid = character:WaitForChild("Humanoid")
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
+local active = false
+
 local function AutoShoot()
-    pcall(function()
+    if warmupFinished.Value == false then
         local args = {true, "Shooting", "Standing Shot"}
         local event = ReplicatedStorage:WaitForChild("PlayerEvents"):WaitForChild("Shooting")
         local actionValues = player.Backpack:WaitForChild("ActionValues", 5)
@@ -51,11 +53,8 @@ local function AutoShoot()
         local gameplayAnimations = player.Backpack:WaitForChild("GameplayAnimations", 5)
         local shootingAnimations = gameplayAnimations and gameplayAnimations:WaitForChild("ShootingAnimations", 2)
         local animation = shootingAnimations and shootingAnimations:FindFirstChild("Jumpshot")
-        local connection
         if powerValue then
-            connection = RunService.Heartbeat:Connect(function()
-                powerValue.Value = 1
-            end)
+            powerValue.Value = 1
         end
         if animation and humanoid then
             local animator = humanoid:FindFirstChildOfClass("Animator")
@@ -65,18 +64,17 @@ local function AutoShoot()
             end
         end
         if event then
-            for i = 1, 1000000 do
+            for _ = 1, 250 do
+                if warmupFinished.Value == true then break end
                 event:FireServer(unpack(args))
-                task.wait()
             end
         end
-        if connection then
-            connection:Disconnect()
-        end
-    end)
+    end
+    active = false
 end
 
 local function walkToNearestBall()
+    if warmupFinished.Value == true then return end
     local nearestBall = nil
     local minDistance = math.huge
     local ballsFolder = workspace:FindFirstChild("Balls")
@@ -91,31 +89,15 @@ local function walkToNearestBall()
             end
         end
     end
-    if nearestBall then
+    if nearestBall and warmupFinished.Value == false then
         humanoid:MoveTo(nearestBall.Position)
         humanoid.MoveToFinished:Wait()
-        wait(2)
-        AutoShoot()
-    end
-end
-
-local function moveToPositionAfterInterval()
-    while true do
-        if warmupFinished.Value == true then
-            wait(90)
-            local originalPosition = Vector3.new(-13.00, 3.34, -420.29)
-            humanoid:MoveTo(originalPosition)
-            humanoid.MoveToFinished:Wait()
+        task.wait(0.5)
+        if warmupFinished.Value == false then
+            AutoShoot()
         end
-        wait(1)
     end
 end
-
-warmupFinished:GetPropertyChangedSignal("Value"):Connect(function()
-    if warmupFinished.Value == true then
-        moveToPositionAfterInterval()
-    end
-end)
 
 RunService.Heartbeat:Connect(function()
     local x2Event = ReplicatedStorage:FindFirstChild("X2Event")
@@ -128,13 +110,9 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local canRun = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.T and warmupFinished.Value == false and canRun then
-        canRun = false
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.T and warmupFinished.Value == false and not active then
+        active = true
         walkToNearestBall()
-        task.delay(5, function()
-            canRun = true
-        end)
     end
 end)
