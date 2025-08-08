@@ -51,8 +51,6 @@ local function AutoShoot()
         local gameplayAnimations = player.Backpack:WaitForChild("GameplayAnimations", 5)
         local shootingAnimations = gameplayAnimations and gameplayAnimations:WaitForChild("ShootingAnimations", 2)
         local animation = shootingAnimations and shootingAnimations:FindFirstChild("Jumpshot")
-        if not humanoidRootPart then return end
-        humanoidRootPart.Anchored = true
         local connection
         if powerValue then
             connection = RunService.Heartbeat:Connect(function()
@@ -75,7 +73,6 @@ local function AutoShoot()
         if connection then
             connection:Disconnect()
         end
-        humanoidRootPart.Anchored = false
     end)
 end
 
@@ -133,7 +130,7 @@ end)
 
 local canRun = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.E and warmupFinished.Value == false and canRun then
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.T and warmupFinished.Value == false and canRun then
         canRun = false
         walkToNearestBall()
         task.delay(5, function()
